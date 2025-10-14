@@ -41,7 +41,10 @@ app.post("/signup", async (req, res) => {
             expiresIn: "7d"
         })
 
-        res.json({ user: result.rows[0], token })
+        res.json({ 
+            user: result.rows[0], 
+            token 
+        })
 
     } catch(err) {
         console.log(err)
