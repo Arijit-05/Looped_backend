@@ -90,7 +90,8 @@ app.post("/signin", async (req, res) => {
 // GET all streaks route
 app.get("/streaks", async (req, res) => {
   try {
-    const result = await pool.query(`
+    const { offset = 0, limit = 8, difficulty } = req.query;
+    let query = `
       SELECT 
         id,
         title,
@@ -99,9 +100,21 @@ app.get("/streaks", async (req, res) => {
         description,
         participant_count AS "participantCount"
       FROM streaks
-      ORDER BY created_at DESC
-    `);
-    res.json(result.rows);
+    `
+
+    const values = [];
+
+    if (difficulty) {
+      query += ` WHERE LOWER(difficulty) = LOWER($1)`;
+      values.push(difficulty);
+    }
+
+    query += ` ORDER BY participant_count DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+    values.push(limit, offset)
+
+    const result = await pool.query(query, values)
+    res.json(result.rows)
+    
   } catch (err) {
     console.error("Error fetching streaks:", err);
     res.status(500).json({ error: err.message });
