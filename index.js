@@ -88,9 +88,11 @@ app.post("/signin", async (req, res) => {
 })
 
 // GET all streaks route
+// GET all streaks route with pagination, filtering & popularity
 app.get("/streaks", async (req, res) => {
   try {
     const { offset = 0, limit = 8, difficulty } = req.query;
+
     let query = `
       SELECT 
         id,
@@ -100,27 +102,28 @@ app.get("/streaks", async (req, res) => {
         description,
         participant_count AS "participantCount"
       FROM streaks
-    `
+    `;
 
-    const values = [];
-
+    const params = [];
     if (difficulty) {
-      query += ` WHERE LOWER(difficulty) = LOWER($1)`;
-      values.push(difficulty);
+      query += ` WHERE difficulty = $1`;
+      params.push(difficulty);
     }
 
-    query += ` ORDER BY participant_count DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
-    values.push(limit, offset)
+    query += `
+      ORDER BY participant_count DESC
+      OFFSET $${params.length + 1}
+      LIMIT $${params.length + 2}
+    `;
+    params.push(offset, limit);
 
-    const result = await pool.query(query, values)
-    res.json(result.rows)
-    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
   } catch (err) {
     console.error("Error fetching streaks:", err);
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // POST create new streak
 app.post("/streaks", async (req, res) => {
