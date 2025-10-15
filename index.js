@@ -91,7 +91,7 @@ app.post("/signin", async (req, res) => {
 app.get("/streaks", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, title, author, difficulty, description, participantCount
+      SELECT id, title, author, difficulty, description, participant_count AS "participantCount"
       FROM streaks
       ORDER BY created_at DESC
     `);
@@ -107,7 +107,7 @@ app.post("/streaks", async (req, res) => {
   const { title, author, difficulty, description, participantCount } = req.body;
   try {
     const result = await pool.query(
-      `INSERT INTO streaks (title, author, difficulty, description, participantCount)
+      `INSERT INTO streaks (title, author, difficulty, description, participant_count AS "participantCount")
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [title, author, difficulty, description, participantCount || 0]
