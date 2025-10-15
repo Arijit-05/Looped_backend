@@ -91,7 +91,13 @@ app.post("/signin", async (req, res) => {
 app.get("/streaks", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, title, author, difficulty, description, participant_count AS "participantCount"
+      SELECT 
+        id,
+        title,
+        author,
+        difficulty,
+        description,
+        participant_count AS "participantCount"
       FROM streaks
       ORDER BY created_at DESC
     `);
@@ -102,14 +108,16 @@ app.get("/streaks", async (req, res) => {
   }
 });
 
+
 // POST create new streak
 app.post("/streaks", async (req, res) => {
   const { title, author, difficulty, description, participantCount } = req.body;
   try {
     const result = await pool.query(
-      `INSERT INTO streaks (title, author, difficulty, description, participant_count AS "participantCount")
+      `INSERT INTO streaks (title, author, difficulty, description, participant_count)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
+       RETURNING 
+         id, title, author, difficulty, description, participant_count AS "participantCount"`,
       [title, author, difficulty, description, participantCount || 0]
     );
     res.status(201).json(result.rows[0]);
