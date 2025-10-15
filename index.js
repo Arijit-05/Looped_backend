@@ -87,4 +87,28 @@ app.post("/signin", async (req, res) => {
     }
 })
 
+// Get all streaks route
+app.get("/streaks", async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                s.id,
+                s.title,
+                s.description,
+                s.difficulty,
+                u.name AS author,
+                COUNT(us.id) AS participant_count
+            FROM streaks s
+            JOIN users u ON s.created_by = u.id
+            LEFT JOIN user_streaks us ON s.id = us.streak_id AND us.is_active = true
+            GROUP BY s.id, u.name
+            ORDER BY s.created_at DESC
+        `);
+        res.json(result.rows)
+    } catch (err) {
+        console.err(`Unable to get streaks. Error: ${err}`)
+        res.status(500).json({"error" : "Error fetching streaks"})
+    }
+})
+
 app.listen(5000, () => console.log(`Server running at http://localhost:5000`))
