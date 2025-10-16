@@ -154,6 +154,83 @@ app.get("/streak/:id", async (req, res) => {
   }
 });
 
+// Join a streak ( add streak to user's streak list )
+app.post("/streak/:id/join", async (req, res) => {
+  try {
+    const { id } = req.params; // streak id
+    const { userId } = req.body; // current user id
+
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    // Check if streak exists
+    const streakCheck = await pool.query(
+      "SELECT id FROM streaks WHERE id = $1",
+      [id]
+    );
+
+    if (streakCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Streak not found" });
+    }
+
+    // Check if user already joined this streak
+    const existing = await pool.query(
+      "SELECT * FROM user_streaks WHERE user_id = $1 AND streak_id = $2",
+      [userId, id]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ message: "User already joined this streak" });
+    }
+
+    // Add streak to user's list
+    await pool.query(
+      "INSERT INTO user_streaks (user_id, streak_id, joined_at) VALUES ($1, $2, NOW())",
+      [userId, id]
+    );
+
+    // Increment participant count
+    await pool.query(
+      "UPDATE streaks SET participant_count = participant_count + 1 WHERE id = $1",
+      [id]
+    );
+
+    res.json({ message: "Streak joined successfully" });
+  } catch (err) {
+    console.error("Error joining streak:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get user_streaks
+app.get("/user/:userId/streaks", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const result = await pool.query(
+      `SELECT 
+         s.id,
+         s.title,
+         s.author,
+         s.difficulty,
+         s.description,
+         s.participant_count AS "participantCount",
+         us.joined_at
+       FROM user_streaks us
+       JOIN streaks s ON us.streak_id = s.id
+       WHERE us.user_id = $1
+       ORDER BY us.joined_at DESC`,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching user's streaks:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 // POST create new streak
 app.post("/streaks", async (req, res) => {
