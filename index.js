@@ -99,7 +99,8 @@ app.get("/streaks", async (req, res) => {
         author,
         difficulty,
         description,
-        participant_count AS "participantCount"
+        participant_count AS "participantCount",
+        emoji
       FROM streaks
     `;
 
@@ -135,7 +136,8 @@ app.get("/streak/:id", async (req, res) => {
         author,
         difficulty,
         description,
-        participant_count AS "participantCount"
+        participant_count AS "participantCount",
+        emoji
       FROM streaks
       WHERE id = $1
     `;
@@ -235,6 +237,8 @@ app.get("/user/:userId/streaks", async (req, res) => {
 // POST create new streak
 app.post("/streaks", async (req, res) => {
   const { title, author, difficulty, description, participantCount } = req.body;
+  const chosenEmoji = emoji || '🎯';
+
   try {
     const result = await pool.query(
       `INSERT INTO streaks (title, author, difficulty, description, participant_count)
