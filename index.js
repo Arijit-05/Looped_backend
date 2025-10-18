@@ -218,6 +218,7 @@ app.get("/user/:userId/streaks", async (req, res) => {
          s.difficulty,
          s.description,
          s.participant_count AS "participantCount",
+         s.emoji,
          us.joined_at
        FROM user_streaks us
        JOIN streaks s ON us.streak_id = s.id
