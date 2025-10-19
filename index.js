@@ -234,6 +234,68 @@ app.get("/user/:userId/streaks", async (req, res) => {
   }
 });
 
+// GET progress for a streak for a user within a date range
+// /streak/:id/progress?userId=123&start=2025-10-01&end=2025-10-31
+app.get("/streak/:id/progress", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, start, end } = req.query;
+    if (!userId) return res.status(400).json({ error: "userId required" });
+
+    // default range: last 8 weeks if not provided (but for simplicity, require start/end from client)
+    if (!start || !end) {
+      // fallback: return last 90 days
+      const result = await pool.query(
+        `SELECT date FROM streak_progress
+         WHERE streak_id = $1 AND user_id = $2
+         AND date >= CURRENT_DATE - INTERVAL '90 days'`,
+        [id, userId]
+      );
+      return res.json(result.rows.map(r => r.date));
+    }
+
+    const result = await pool.query(
+      `SELECT date FROM streak_progress
+       WHERE streak_id = $1 AND user_id = $2
+       AND date BETWEEN $3::date AND $4::date
+       ORDER BY date ASC`,
+      [id, userId, start, end]
+    );
+
+    // return array of date strings (ISO yyyy-mm-dd)
+    res.json(result.rows.map(r => r.date));
+  } catch (err) {
+    console.error("Error fetching progress:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST mark done (idempotent). Body: { userId: number, date?: "YYYY-MM-DD" }
+// POST /streak/:id/progress
+app.post("/streak/:id/progress", async (req, res) => {
+  try {
+    const { id } = req.params; // streak id
+    const { userId, date } = req.body;
+    if (!userId) return res.status(400).json({ error: "userId required" });
+
+    const targetDate = date ? date : new Date().toISOString().slice(0,10); // YYYY-MM-DD
+
+    // insert if doesn't exist (idempotent)
+    await pool.query(
+      `INSERT INTO streak_progress (user_id, streak_id, date, done)
+       VALUES ($1, $2, $3, true)
+       ON CONFLICT (user_id, streak_id, date) DO UPDATE SET done = true
+       `,
+      [userId, id, targetDate]
+    );
+
+    res.json({ message: "Marked done", date: targetDate });
+  } catch (err) {
+    console.error("Error marking progress:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // POST create new streak
 app.post("/streaks", async (req, res) => {
