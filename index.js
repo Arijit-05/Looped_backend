@@ -296,6 +296,24 @@ app.post("/streak/:id/progress", async (req, res) => {
   }
 });
 
+// DELETE Streak
+app.delete("/streak/:streakId/progress", async (req, res) => {
+  try {
+    const { streakId } = req.params;
+    const { userId, date } = req.query;
+
+    await pool.query(
+      `DELETE FROM streak_progress 
+       WHERE user_id = $1 AND streak_id = $2 AND date = $3`,
+      [userId, streakId, date]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting progress:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // POST create new streak
 app.post("/streaks", async (req, res) => {
